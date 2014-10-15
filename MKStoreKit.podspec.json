@@ -19,8 +19,7 @@
   },
   "source_files": [
     "*.{h,m}",
-    "Externals/*.{h,m}",
-    "MKStoreKitConfigs.plist"
+    "Externals/*.{h,m}"
   ],
    "exclude_files": "VerificationController.{h,m}",
   "requires_arc": true,
