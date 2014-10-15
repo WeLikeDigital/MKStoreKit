@@ -46,8 +46,6 @@
 #define inappUPINTOP @"ru.welike.upintop"
 #define SERVER_URL @"https://api.welike.ru/"
 
-#import "config.h"
-
 #ifndef SERVER_PRODUCT_MODEL
     #define SERVER_PRODUCT_MODEL 1
 #endif
