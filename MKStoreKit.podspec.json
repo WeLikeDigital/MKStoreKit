@@ -21,6 +21,7 @@
     "*.{h,m}",
     "Externals/*.{h,m}"
   ],
+   "exclude_files": "VerificationController.{h,m}",
   "requires_arc": true,
   "frameworks": [
     "StoreKit",
