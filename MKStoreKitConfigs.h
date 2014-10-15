@@ -41,19 +41,25 @@
 // #define kConsumableFeatureBId @"com.mycompany.myapp.005"
 // #define FishBasket @"FishBasket"
 
+#define inappVIP1 @"ru.welike.subvip1"
+#define inappVIP12 @"ru.welike.subvip12"
+#define inappUPINTOP @"ru.welike.upintop"
+#define SERVER_URL @"https://api.welike.ru/"
+
+#import "config.h"
+
 #ifndef SERVER_PRODUCT_MODEL
-    #define SERVER_PRODUCT_MODEL 0
+    #define SERVER_PRODUCT_MODEL 1
 #endif
 
 #ifndef OWN_SERVER
-    #define OWN_SERVER nil
+    #define OWN_SERVER SERVER_URL
 #endif
 
 #ifndef REVIEW_ALLOWED
     #define REVIEW_ALLOWED 0
 #endif
 
-#warning Shared Secret Missing Ignore this warning if you don't use auto-renewable subscriptions
 #ifndef kSharedSecret
     #define kSharedSecret @"<FILL IN YOUR SHARED SECRET HERE>"
 #endif

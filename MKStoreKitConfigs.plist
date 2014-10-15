@@ -4,22 +4,22 @@
 <dict>
 	<key>Consumables</key>
 	<dict>
-		<key>com.steinlogic.iap6test.consumable</key>
+		<key>ru.welike.upintop</key>
 		<dict>
 			<key>Count</key>
-			<integer>500</integer>
+			<integer>1</integer>
 			<key>Name</key>
-			<string>EggBasket</string>
+			<string>upintop</string>
 		</dict>
 	</dict>
 	<key>Non-Consumables</key>
-	<array>
-		<string>com.steinlogic.iap6test.nonconsumable</string>
-	</array>
+	<array/>
 	<key>Subscriptions</key>
 	<dict>
-		<key>com.steinlogic.iap6test.autorenew</key>
-		<integer>7</integer>
+		<key>ru.welike.subvip1</key>
+		<string>1</string>
+		<key>ru.welike.subvip12</key>
+		<string>12</string>
 	</dict>
 </dict>
 </plist>

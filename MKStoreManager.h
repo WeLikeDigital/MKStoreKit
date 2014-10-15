@@ -39,12 +39,6 @@
 
 #define kReceiptStringKey @"MK_STOREKIT_RECEIPTS_STRING"
 
-#ifndef NDEBUG
-#define kReceiptValidationURL @"https://sandbox.itunes.apple.com/verifyReceipt"
-#else
-#define kReceiptValidationURL @"https://buy.itunes.apple.com/verifyReceipt"
-#endif
-
 #define kProductFetchedNotification @"MKStoreKitProductsFetched"
 #define kSubscriptionsPurchasedNotification @"MKStoreKitSubscriptionsPurchased"
 #define kSubscriptionsInvalidNotification @"MKStoreKitSubscriptionsInvalid"

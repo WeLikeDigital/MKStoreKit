@@ -174,8 +174,11 @@ static NSMutableData *sDataFromConnection;
   self.onReceiptVerificationSucceeded = completionBlock;
   self.onReceiptVerificationFailed = errorBlock;
   
-  NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/%@", OWN_SERVER, @"verifyProduct.php"]];
+  NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/user/verifyReceipt/?access_token=%@", OWN_SERVER, [[NSUserDefaults standardUserDefaults] objectForKey:@"access_token"]]];
 	
+    if (![self.productId isEqualToString:inappUPINTOP]) url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/user/verifyReceipt/?access_token=%@", OWN_SERVER, [[NSUserDefaults standardUserDefaults] objectForKey:@"access_token"]]];
+    else url = [NSURL URLWithString:[NSString stringWithFormat:@"%@post/top/%d/?access_token=%@", OWN_SERVER, [[NSUserDefaults standardUserDefaults] integerForKey:inappUPINTOP], [[NSUserDefaults standardUserDefaults] objectForKey:@"access_token"]]];
+    
 	NSMutableURLRequest *theRequest = [NSMutableURLRequest requestWithURL:url 
                                                             cachePolicy:NSURLRequestReloadIgnoringCacheData 
                                                         timeoutInterval:60];
@@ -183,9 +186,12 @@ static NSMutableData *sDataFromConnection;
 	[theRequest setHTTPMethod:@"POST"];		
 	[theRequest setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
 	
+    NSString *userAgent = [NSString stringWithFormat:@"%@/%@ (%@; iOS %@; Scale/%0.2f)", [[[NSBundle mainBundle] infoDictionary] objectForKey:(__bridge NSString *)kCFBundleExecutableKey] ?: [[[NSBundle mainBundle] infoDictionary] objectForKey:(__bridge NSString *)kCFBundleIdentifierKey], (__bridge id)CFBundleGetValueForInfoDictionaryKey(CFBundleGetMainBundle(), kCFBundleVersionKey) ?: [[[NSBundle mainBundle] infoDictionary] objectForKey:(__bridge NSString *)kCFBundleVersionKey], [[UIDevice currentDevice] model], [[UIDevice currentDevice] systemVersion], ([[UIScreen mainScreen] respondsToSelector:@selector(scale)] ? [[UIScreen mainScreen] scale] : 1.0f)];
+    [theRequest setValue:userAgent forHTTPHeaderField:@"User-Agent"];
+    
 	NSString *receiptDataString = [self.receipt base64EncodedString];
   
-	NSString *postData = [NSString stringWithFormat:@"receiptdata=%@", receiptDataString];
+	NSString *postData = [NSString stringWithFormat:@"receipt=%@", receiptDataString];
 	
 	NSString *length = [NSString stringWithFormat:@"%d", [postData length]];	
 	[theRequest setValue:length forHTTPHeaderField:@"Content-Length"];	
@@ -218,14 +224,19 @@ didReceiveResponse:(NSURLResponse *)response
                                                    encoding:NSASCIIStringEncoding];
   responseString = [responseString stringByTrimmingCharactersInSet:
                     [NSCharacterSet whitespaceAndNewlineCharacterSet]];
-  self.dataFromConnection = nil;
-	if([responseString isEqualToString:@"YES"])		
+    
+    NSData* data = [responseString dataUsingEncoding:NSUTF8StringEncoding];
+    NSError* error;
+    NSDictionary* json = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:&error];
+    
+    self.dataFromConnection = nil;
+	if([json objectForKey:@"data"] != nil && [[json objectForKey:@"data"] objectForKey:@"receipt_status"] != nil && [[[json objectForKey:@"data"] objectForKey:@"receipt_status"] integerValue] == 0)
 	{
-    if(self.onReceiptVerificationSucceeded)
-    {
-      self.onReceiptVerificationSucceeded();
-      self.onReceiptVerificationSucceeded = nil;
-    }
+        if(self.onReceiptVerificationSucceeded)
+        {
+          self.onReceiptVerificationSucceeded();
+          self.onReceiptVerificationSucceeded = nil;
+        }
 	}
   else
   {
@@ -243,7 +254,6 @@ didReceiveResponse:(NSURLResponse *)response
 - (void)connection:(NSURLConnection *)connection
   didFailWithError:(NSError *)error
 {
-  
   self.dataFromConnection = nil;
   if(self.onReceiptVerificationFailed)
   {

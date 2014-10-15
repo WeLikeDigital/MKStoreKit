@@ -55,28 +55,35 @@
 
 - (void) verifyReceiptOnComplete:(void (^)(NSNumber*)) completionBlock
                          onError:(void (^)(NSError*)) errorBlock
-{        
-  self.onSubscriptionVerificationCompleted = completionBlock;
-  self.onSubscriptionVerificationFailed = errorBlock;
-  
-  NSURL *url = [NSURL URLWithString:kReceiptValidationURL];
+{
+    self.onSubscriptionVerificationCompleted = completionBlock;
+    self.onSubscriptionVerificationFailed = errorBlock;
+    
+    NSURL *url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/user/verifyReceipt/?access_token=%@", OWN_SERVER, [[NSUserDefaults standardUserDefaults] objectForKey:@"access_token"]]];
 	
-	NSMutableURLRequest *theRequest = [NSMutableURLRequest requestWithURL:url 
-                                                            cachePolicy:NSURLRequestReloadIgnoringCacheData 
-                                                        timeoutInterval:60];
+    if (![self.productId isEqualToString:inappUPINTOP]) url = [NSURL URLWithString:[NSString stringWithFormat:@"%@/user/verifyReceipt/?access_token=%@", OWN_SERVER, [[NSUserDefaults standardUserDefaults] objectForKey:@"access_token"]]];
+    else url = [NSURL URLWithString:[NSString stringWithFormat:@"%@post/top/%d/?access_token=%@", OWN_SERVER, [[NSUserDefaults standardUserDefaults] integerForKey:inappUPINTOP], [[NSUserDefaults standardUserDefaults] objectForKey:@"access_token"]]];
+    
+	NSMutableURLRequest *theRequest = [NSMutableURLRequest requestWithURL:url
+                                                              cachePolicy:NSURLRequestReloadIgnoringCacheData
+                                                          timeoutInterval:60];
 	
-	[theRequest setHTTPMethod:@"POST"];		
+    NSString *userAgent = [NSString stringWithFormat:@"%@/%@ (%@; iOS %@; Scale/%0.2f)", [[[NSBundle mainBundle] infoDictionary] objectForKey:(__bridge NSString *)kCFBundleExecutableKey] ?: [[[NSBundle mainBundle] infoDictionary] objectForKey:(__bridge NSString *)kCFBundleIdentifierKey], (__bridge id)CFBundleGetValueForInfoDictionaryKey(CFBundleGetMainBundle(), kCFBundleVersionKey) ?: [[[NSBundle mainBundle] infoDictionary] objectForKey:(__bridge NSString *)kCFBundleVersionKey], [[UIDevice currentDevice] model], [[UIDevice currentDevice] systemVersion], ([[UIScreen mainScreen] respondsToSelector:@selector(scale)] ? [[UIScreen mainScreen] scale] : 1.0f)];
+    [theRequest setValue:userAgent forHTTPHeaderField:@"User-Agent"];
+	[theRequest setHTTPMethod:@"POST"];
 	[theRequest setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
 	
-  NSString *receiptString = [NSString stringWithFormat:@"{\"receipt-data\":\"%@\" \"password\":\"%@\"}", [self.receipt base64EncodedString], kSharedSecret];        
-  
-	NSString *length = [NSString stringWithFormat:@"%d", [receiptString length]];	
-	[theRequest setValue:length forHTTPHeaderField:@"Content-Length"];	
+	NSString *receiptDataString = [self.receipt base64EncodedString];
+    
+	NSString *postData = [NSString stringWithFormat:@"receipt=%@", receiptDataString];
 	
-	[theRequest setHTTPBody:[receiptString dataUsingEncoding:NSUTF8StringEncoding]];
+	NSString *length = [NSString stringWithFormat:@"%d", [postData length]];
+	[theRequest setValue:length forHTTPHeaderField:@"Content-Length"];
 	
-  self.theConnection = [NSURLConnection connectionWithRequest:theRequest delegate:self];  
-  [self.theConnection start];    
+	[theRequest setHTTPBody:[postData dataUsingEncoding:NSASCIIStringEncoding]];
+	
+    self.theConnection = [NSURLConnection connectionWithRequest:theRequest delegate:self];
+    [self.theConnection start];
 }
 
 -(BOOL) isSubscriptionActive
@@ -91,7 +98,6 @@
     
     NSString *purchasedDateString = [[self.verifiedReceiptDictionary objectForKey:@"receipt"] objectForKey:@"purchase_date"];        
     if(!purchasedDateString) {
-      NSLog(@"Receipt Dictionary from Apple Server is invalid: %@", self.verifiedReceiptDictionary);
       return NO;
     }
     NSDateFormatter *df = [[NSDateFormatter alloc] init];
@@ -130,14 +136,33 @@ didReceiveResponse:(NSURLResponse *)response
 
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection
 {
-  self.receipt = [self.dataFromConnection copy];
-  if(self.onSubscriptionVerificationCompleted)
-  {
-    self.onSubscriptionVerificationCompleted([NSNumber numberWithBool:[self isSubscriptionActive]]);
+   NSString *responseString = [[NSString alloc] initWithData:self.dataFromConnection
+                                                     encoding:NSASCIIStringEncoding];
+    responseString = [responseString stringByTrimmingCharactersInSet:
+                      [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    
+    NSData* data = [responseString dataUsingEncoding:NSUTF8StringEncoding];
+    NSError* error;
+    NSDictionary* json = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions error:&error];
+    
     self.dataFromConnection = nil;
-  }
-  
-  self.onSubscriptionVerificationCompleted = nil;
+    if([json objectForKey:@"data"] != nil && [[json objectForKey:@"data"] objectForKey:@"receipt_status"] != nil && [[[json objectForKey:@"data"] objectForKey:@"receipt_status"] integerValue] == 0)
+    {
+        if(self.onSubscriptionVerificationCompleted)
+        {
+            self.onSubscriptionVerificationCompleted([NSNumber numberWithBool:[self isSubscriptionActive]]);
+            self.onSubscriptionVerificationCompleted = nil;
+        }
+    }
+    else
+    {
+        if(self.onSubscriptionVerificationFailed)
+        {
+            self.onSubscriptionVerificationFailed(nil);
+            self.onSubscriptionVerificationFailed = nil;
+        }
+    }
+    
 }
 
 - (void)connection:(NSURLConnection *)connection
